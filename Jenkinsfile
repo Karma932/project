@@ -1,47 +1,27 @@
-4qgrweadsvx
 pipeline {
-agent {
-label {
-		label "built-in-project"
-		customWorkspace "/data/project-myapp"
-		
-		}
-		}
-		
-	stages {
-		
-		stage ('CLEAN_OLD_M2') {
-			
-			steps {
-				sh "rm -rf /home/saccount/.m2/repository"
-				
-			}
-			
-		}
-	
-		stage ('MAVEN_BUILD') {
-		
-			steps {
-						
-						sh "mvn clean package"
-			
-			}
-			
-		
-		}
-		
-		stage ('COPY_WAR_TO_Server'){
-		
-				steps {
-						
-						sh "scp -r target/LoginWebApp.war saccount@10.0.2.51:/data/project/wars"
+    agent any
 
-						}
-				
-				}
-	
-	
-	
-	}
-		
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/Karma932/project.git'
+            }
+        }
+
+        stage('Build WAR') {
+            steps {
+                sh 'mvn package'
+            }
+        }
+
+        stage('Deploy to Tomcat') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'tomcat-slave-key', keyFileVariable: 'SSH_KEY')]) {
+                    sh '''
+                        scp -o StrictHostKeyChecking=no -i $SSH_KEY target/LoginWebApp.war ec2-user@43.204.97.87:/mnt/servers/apache-tomcat-10.1.54/webapps/
+                    '''
+                }
+            }
+        }
+    }
 }
