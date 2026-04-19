@@ -5,7 +5,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/your-org/your-repo.git'
+                    url: 'https://github.com/Karma932/project.git'
             }
         }
 
@@ -17,7 +17,6 @@ pipeline {
 
         stage('Deploy to Tomcat') {
             steps {
-                // Copy WAR file to Tomcat webapps directory
                 sh '''
                 cp target/*.war /mnt/webapps/apache-tomcat-10.1.54/webapps/
                 /mnt/webapps/apache-tomcat-10.1.54/bin/shutdown.sh || true
