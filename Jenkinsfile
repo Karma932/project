@@ -1,26 +1,28 @@
 pipeline {
-    agent any
+    agent { label 'tomcat' }   // Targets your Agent Node
 
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/Karma932/project.git'
+                git branch: 'main',
+                    url: 'https://github.com/your-org/your-repo.git'
             }
         }
 
-        stage('Build WAR') {
+        stage('Build with Maven') {
             steps {
-                sh 'mvn package'
+                sh 'mvn clean package'
             }
         }
 
         stage('Deploy to Tomcat') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'tomcat-slave-key', keyFileVariable: 'SSH_KEY')]) {
-                    sh '''
-                        scp -o StrictHostKeyChecking=no -i $SSH_KEY target/LoginWebApp.war ec2-user@43.204.97.87:/mnt/servers/apache-tomcat-10.1.54/webapps/
-                    '''
-                }
+                // Copy WAR file to Tomcat webapps directory
+                sh '''
+                cp target/*.war /mnt/webapps/apache-tomcat-10.1.54/webapps/
+                /mnt/webapps/apache-tomcat-10.1.54/bin/shutdown.sh || true
+                /mnt/webapps/apache-tomcat-10.1.54/bin/startup.sh
+                '''
             }
         }
     }
