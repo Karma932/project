@@ -1,10 +1,15 @@
 pipeline {
-    agent { label 'tomcat' }   // Targets your Agent Node
+    agent { label 'tomcat' }
+
+    environment {
+        DB_CREDS = credentials('DB_CREDS')
+        DB_URL = "jdbc:mysql://database-1.ctama2ma2nqr.ap-south-1.rds.amazonaws.com:3306/mysql"
+    }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'master',
+                git branch: 'main',
                     url: 'https://github.com/Karma932/project.git'
             }
         }
