@@ -16,12 +16,13 @@ pipeline {
         }
 
         stage('Deploy to Tomcat') {
+            agent { label 'tomcat' }   // run this stage on the Tomcat slave
             steps {
                 sh '''
                 WAR_FILE=$(ls target/*.war | head -n 1)
-                sudo cp $WAR_FILE /mnt/webapps/apache-tomcat-10.1.54/webapps/LoginWebApp.war
-                sudo /mnt/webapps/apache-tomcat-10.1.54/bin/shutdown.sh || true
-                sudo /mnt/webapps/apache-tomcat-10.1.54/bin/startup.sh
+                cp $WAR_FILE /mnt/webapps/apache-tomcat-10.1.54/webapps/LoginWebApp.war
+                /mnt/webapps/apache-tomcat-10.1.54/bin/shutdown.sh || true
+                /mnt/webapps/apache-tomcat-10.1.54/bin/startup.sh
                 '''
             }
         }
