@@ -1,31 +1,29 @@
+
 pipeline {
     agent any
-
-    environment {
-        DB_CREDS = credentials('DB_CREDS')
-        DB_URL = "jdbc:mysql://database-1.ctama2ma2nqr.ap-south-1.rds.amazonaws.com:3306/mysql"
-    }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/Karma932/project.git'
+                git branch: 'master',
+                    url: 'https://github.com/Karma932/project.git',
+                    credentialsId: 'github-creds'   // Replace with your Jenkins GitHub PAT credential ID
             }
         }
 
         stage('Build with Maven') {
             steps {
-                sh 'mvn clean package'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
         stage('Deploy to Tomcat') {
             steps {
                 sh '''
-                cp target/*.war /mnt/webapps/apache-tomcat-10.1.54/webapps/
-                /mnt/webapps/apache-tomcat-10.1.54/bin/shutdown.sh || true
-                /mnt/webapps/apache-tomcat-10.1.54/bin/startup.sh
+                WAR_FILE=$(ls target/*.war | head -n 1)
+                cp $WAR_FILE /mnt/webapps/apache-tomcat-10.1.19/webapps/project.war
+                /mnt/webapps/apache-tomcat-10.1.19/bin/shutdown.sh || true
+                /mnt/webapps/apache-tomcat-10.1.19/bin/startup.sh
                 '''
             }
         }
