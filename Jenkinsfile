@@ -5,8 +5,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'master',
-                    url: 'https://github.com/Karma932/project.git',
-                    credentialsId: 'github-creds'   // Replace with your Jenkins GitHub PAT credential ID
+                    url: 'https://github.com/Karma932/project.git'
             }
         }
 
