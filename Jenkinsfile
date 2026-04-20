@@ -10,14 +10,14 @@ pipeline {
         }
 
         stage('Build with Maven') {
-            agent { label 'master' }   // run build on Jenkins master
+            agent { label 'master' }   // build on Jenkins master
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
 
         stage('Deploy to Tomcat') {
-            agent { label 'tomcat' }   // run deploy on Tomcat EC2
+            agent { label 'tomcat' }   // deploy on Tomcat EC2
             steps {
                 sh '''
                 WAR_FILE=$(ls target/*.war | head -n 1)
