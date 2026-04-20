@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -21,9 +20,9 @@ pipeline {
             steps {
                 sh '''
                 WAR_FILE=$(ls target/*.war | head -n 1)
-                cp $WAR_FILE /mnt/webapps/apache-tomcat-10.1.19/webapps/project.war
-                /mnt/webapps/apache-tomcat-10.1.19/bin/shutdown.sh || true
-                /mnt/webapps/apache-tomcat-10.1.19/bin/startup.sh
+                cp $WAR_FILE /mnt/webapps/apache-tomcat-10.1.54/webapps/project.war
+                /mnt/webapps/apache-tomcat-10.1.54/bin/shutdown.sh || true
+                /mnt/webapps/apache-tomcat-10.1.54/bin/startup.sh
                 '''
             }
         }
