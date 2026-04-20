@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'tomcat' }
+    agent any
 
     environment {
         DB_CREDS = credentials('DB_CREDS')
