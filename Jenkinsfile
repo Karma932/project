@@ -5,75 +5,62 @@ pipeline {
         DOCKER_NETWORK = 'app-network'
         MYSQL_CONTAINER = 'mysql-db'
         TOMCAT_CONTAINER = 'tomcat-server'
-        APP_REPO = 'https://github.com/Karma932/project.git'
         MYSQL_ROOT_PASSWORD = 'mysecretpassword'
         MYSQL_DATABASE = 'appdb'
     }
 
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                git url: APP_REPO, branch: 'master'
+                git url: 'https://github.com/Karma932/project.git', branch: 'master'
             }
         }
 
-        stage('Setup Docker Network') {
+        stage('Network') {
             steps {
-                script {
-                    sh "docker network inspect ${DOCKER_NETWORK} || docker network create ${DOCKER_NETWORK}"
-                }
+                sh "docker network inspect ${DOCKER_NETWORK} || docker network create ${DOCKER_NETWORK}"
             }
         }
 
-        stage('Start MySQL Database') {
+        stage('MySQL') {
             steps {
-                script {
-                    sh """
-                        docker run -d \
-                            --name ${MYSQL_CONTAINER} \
-                            --network ${DOCKER_NETWORK} \
-                            -e MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} \
-                            -e MYSQL_DATABASE=${MYSQL_DATABASE} \
-                            mysql:latest
-                    """
-                    echo 'Waiting for MySQL to start...'
-                    sleep time: 30, unit: 'SECONDS'
-                }
+                sh "docker rm -f ${MYSQL_CONTAINER} 2>/dev/null || true"
+                sh """
+                    docker run -d \
+                        --name ${MYSQL_CONTAINER} \
+                        --network ${DOCKER_NETWORK} \
+                        -e MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} \
+                        -e MYSQL_DATABASE=${MYSQL_DATABASE} \
+                        mysql:latest
+                """
+                sleep 30
             }
         }
 
-        stage('Initialize Database Schema') {
+        stage('Schema') {
             steps {
-                script {
-                    if (fileExists('correct_schema.sql')) {
-                        sh "docker exec -i ${MYSQL_CONTAINER} mysql -uroot -p${MYSQL_ROOT_PASSWORD} ${MYSQL_DATABASE} < correct_schema.sql"
-                        echo "Database schema loaded successfully."
-                    } else {
-                        error "Database schema file 'correct_schema.sql' not found in the workspace."
-                    }
-                }
+                sh "docker exec -i ${MYSQL_CONTAINER} mysql -uroot -p${MYSQL_ROOT_PASSWORD} ${MYSQL_DATABASE} < correct_schema.sql"
             }
         }
 
-        stage('Build Application with Maven') {
+        stage('Build') {
             steps {
-                script {
-                    sh """
-                        docker run --rm \
-                            -v maven-repo:/root/.m2 \
-                            -v \${WORKSPACE}:/workspace \
-                            -w /workspace \
-                            maven:3-openjdk-11 \
-                            mvn clean package
-                    """
-                }
+                sh """
+                    docker run --rm \
+                        -v maven-repo:/root/.m2 \
+                        -v \${WORKSPACE}:/workspace \
+                        -w /workspace \
+                        maven:3-openjdk-11 \
+                        mvn clean package
+                """
             }
         }
 
-        stage('Deploy to Tomcat') {
+        stage('Tomcat') {
             steps {
                 script {
                     def warFile = findFiles(glob: 'target/*.war')[0].path
+                    sh "docker rm -f ${TOMCAT_CONTAINER} 2>/dev/null || true"
                     sh """
                         docker run -d \
                             --name ${TOMCAT_CONTAINER} \
@@ -81,39 +68,19 @@ pipeline {
                             -p 8080:8080 \
                             tomcat:latest
                     """
-                    echo 'Waiting for Tomcat to start...'
-                    sleep time: 10, unit: 'SECONDS'
-                    sh """
-                        docker cp ${warFile} ${TOMCAT_CONTAINER}:/usr/local/tomcat/webapps/ROOT.war
-                    """
+                    sleep 10
+                    sh "docker cp ${warFile} ${TOMCAT_CONTAINER}:/usr/local/tomcat/webapps/ROOT.war"
                 }
             }
         }
 
-        stage('Verify Deployment') {
+        stage('Verify') {
             steps {
-                script {
-                    sh """
-                        echo 'Waiting for application to deploy...'
-                        sleep time: 20, unit: 'SECONDS'
-                        curl --fail http://localhost:8080/
-                    """
-                    echo 'Application is up and running!'
-                }
+                sh """
+                    sleep 20
+                    curl --fail http://localhost:8080/
+                """
             }
-        }
-    }
-
-    post {
-        always {
-            echo 'Pipeline finished. Containers are left running for inspection.'
-        }
-        success {
-            echo 'Pipeline executed successfully!'
-        }
-        failure {
-            echo 'Pipeline failed. Please check the logs.'
         }
     }
 }
-EOF
