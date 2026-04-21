@@ -1,30 +1,41 @@
 pipeline {
-    agent any
+    agent { label 'tomcat' }
+
+    environment {
+        DB_CREDS = credentials('DB_CREDS')
+    }
 
     stages {
+
         stage('Checkout') {
             steps {
-                git branch: 'master',
-                    url: 'https://github.com/Karma932/project.git'
+                git branch: 'master', url: 'https://github.com/Karma932/project.git'
             }
         }
 
-        stage('Build with Maven') {
-            agent { label 'master' }   // build on Jenkins master
+        stage('Build') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh 'mvn clean package'
             }
         }
 
-        stage('Deploy to Tomcat') {
-            agent { label 'tomcat' }   // deploy on Tomcat EC2
+        stage('Update Config') {
             steps {
                 sh '''
-                WAR_FILE=$(ls target/*.war | head -n 1)
-                cp $WAR_FILE /mnt/webapps/apache-tomcat-10.1.54/webapps/LoginWebApp.war
-                /mnt/webapps/apache-tomcat-10.1.54/bin/shutdown.sh || true
-                /mnt/webapps/apache-tomcat-10.1.54/bin/startup.sh
+                echo "db.username=$DB_CREDS_USR" > src/main/resources/application.properties
+                echo "db.password=$DB_CREDS_PSW" >> src/main/resources/application.properties
                 '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sshagent(['SLAVE_SSH_KEY']) {
+                    sh '''
+                    scp -o StrictHostKeyChecking=no target/*.war ec2-user@172.31.14.25:/mnt/webapps/
+                    ssh ec2-user@172.31.14.25 "sudo systemctl restart tomcat"
+                    '''
+                }
             }
         }
     }
