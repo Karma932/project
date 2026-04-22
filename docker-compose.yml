@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:latest
+    container_name: app-mysql
+    environment:
+      MYSQL_DATABASE: appdb
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppass
+      MYSQL_ROOT_PASSWORD: rootpass
+    volumes:
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+
+  tomcat:
+    image: tomcat:latest
+    container_name: app-tomcat
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./target/*.war:/usr/local/tomcat/webapps/ROOT.war
+    environment:
+      DB_HOST: mysql
+      DB_NAME: appdb
+      DB_USER: appuser
+      DB_PASSWORD: apppass
+    networks:
+      - app-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+networks:
+  app-network:
+    driver: bridge
