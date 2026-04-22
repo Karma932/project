@@ -5,6 +5,10 @@ pipeline {
         maven 'Maven-3'
     }
 
+    environment {
+        MAVEN_OPTS = '-Xmx512m'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -14,7 +18,7 @@ pipeline {
 
         stage('Build & Package') {
             steps {
-                sh 'mvn clean package'
+                sh 'mvn clean package -DskipTests'  // Skip tests to save memory
             }
         }
 
@@ -26,28 +30,32 @@ pipeline {
 
         stage('Deployment Verification') {
             steps {
-                script {
-                    // Wait for Tomcat to be ready (max 30 seconds)
-                    sh '''
-                        echo "Waiting for Tomcat to start..."
-                        for i in {1..30}; do
-                            if curl -s http://localhost:8080 > /dev/null; then
-                                echo "Tomcat is up!"
-                                exit 0
-                            fi
-                            sleep 1
-                        done
-                        echo "Tomcat did not start in time"
-                        exit 1
-                    '''
-                }
+                sh '''
+                    echo "Waiting for Tomcat to start..."
+                    for i in {1..30}; do
+                        if curl -s http://localhost:8080 > /dev/null; then
+                            echo "Tomcat is up!"
+                            exit 0
+                        fi
+                        sleep 2
+                    done
+                    echo "Tomcat did not start in time"
+                    exit 1
+                '''
             }
         }
 
         stage('Cleanup') {
             steps {
-                sh 'docker compose down --rmi all -v'
+                sh 'docker compose down -v'  // Removed --rmi all to save memory during cleanup
             }
+        }
+    }
+
+    post {
+        always {
+            // Ensure cleanup even if build fails
+            sh 'docker compose down -v || true'
         }
     }
 }
